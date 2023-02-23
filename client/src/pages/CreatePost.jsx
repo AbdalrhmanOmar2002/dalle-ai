@@ -6,13 +6,66 @@ import { getRandomPrompt } from "../utils";
 import { Loader, Card, FormField } from "../components";
 
 const CreatePost = () => {
-  const navigate = useNavigate;
+  const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", prompt: "", photo: "" });
   const [generatingImg, setGeneratingImg] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [openImage, setOpenImage] = useState(false);
 
-  const generatingImage = () => {};
-  const handelSubmit = () => {};
+  const generatingImage = async () => {
+    if (form.prompt) {
+      try {
+        setGeneratingImg(true);
+        const response = await fetch("http://localhost:8080/api/v1/dalle", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: form.prompt }),
+        });
+
+        const data = await response.json();
+
+        // console.log(data);
+
+        setForm({ ...form, photo: `data:image/jpeg;base64,${data.photo}` });
+      } catch (error) {
+        alert(error);
+      } finally {
+        setGeneratingImg(false);
+      }
+    } else {
+      alert("Please enter a prompt");
+    }
+  };
+
+  const handelSubmit = async (e) => {
+    e.preventDefault();
+
+    if (form.prompt && form.photo) {
+      setLoading(true);
+
+      try {
+        const response = await fetch("http://localhost:8080/api/v1/post", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        });
+
+        await response.json();
+        navigate("/");
+      } catch (error) {
+        alert(error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      alert("Please enter a prompt");
+    }
+  };
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -22,8 +75,11 @@ const CreatePost = () => {
     setForm({ ...form, prompt: randomPrompt });
   };
 
-  console.log(form);
+  const handleImage = (e) => {
+    setOpenImage(true);
+  };
 
+  // console.log(form);
   return (
     <section className="max-w-7xl mx-auto">
       <div>
@@ -37,16 +93,16 @@ const CreatePost = () => {
       <form className="mt-16 max-w-7xl" onSubmit={handelSubmit}>
         <div className="flex flex-col gap-5">
           <FormField
-            labelName="text"
-            type="name"
+            labelName="Your Name"
+            type="text"
             name="name"
             placeholder="John Doe"
             value={form.name}
             handleChange={handleChange}
           />
           <FormField
-            labelName="prompt"
-            type="prompt"
+            labelName="Prompt"
+            type="text"
             name="prompt"
             placeholder="teddy bears shopping for groceries in Japan, ukiyo-e"
             value={form.prompt}
@@ -55,12 +111,13 @@ const CreatePost = () => {
             handelSurpriseMe={handelSurpriseMe}
           />
 
-          <div className="relative bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-64 p-3 h-64 flex justify-center items-center">
+          <div className="relative bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-64 p-3 h-64 flex justify-center items-center cursor-pointer">
             {form.photo ? (
               <img
                 src={form.photo}
                 alt={form.prompt}
-                className="w-full object-contain"
+                className="w-full object-contain cursor-pointer"
+                onClick={handleImage}
               />
             ) : (
               <img
@@ -101,6 +158,18 @@ const CreatePost = () => {
           </button>
         </div>
       </form>
+      {openImage ? (
+        <div
+          onClick={(e) => {
+            setOpenImage(false);
+          }}
+          className="fixed top-0 left-0 w-full h-full bg-[rgba(0,0,0,0.7)] flex justify-center items-center cursor-pointer"
+        >
+          <div className="w-[70%] h-[80%] rounded-md shadow-2xl p-2">
+            <img src={form.photo} alt={form.prompt} className="w-full h-full" />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };
